@@ -1,4 +1,6 @@
-url = "YOUR_URL"
+import requests
+
+url = "http://localhost:9696/predict"
 client = {
     "lead_source": "organic_search",
     "number_of_courses_viewed": 4,
