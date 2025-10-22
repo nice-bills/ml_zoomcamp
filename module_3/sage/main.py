@@ -1,15 +1,17 @@
 from typing import Dict, Any
-import pickle
+import joblib
 from fastapi import FastAPI
 import uvicorn
+import pandas as pd
 
 app = FastAPI(title="lead-scoring-prediction")
 
-with open('model.bin', 'rb') as f_in:
-    pipeline = pickle.load(f_in)
+with open('logreg_pipeline.pkl', 'rb') as f_in:
+    pipeline = joblib.load(f_in)
 
 
 def predict_single(trader):
+    trader_df = pd.DataFrame([trader])
     result = pipeline.predict_proba(trader)[0, 1]
     return float(result)
 
