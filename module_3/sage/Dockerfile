@@ -10,7 +10,7 @@ COPY "pyproject.toml" "uv.lock" ".python-version" ./
 
 RUN uv sync --locked
 
-COPY "main.py" "model.bin" ./
+COPY "main.py" "logreg_pipeline.pkl" ./
 
 EXPOSE 9696
 
