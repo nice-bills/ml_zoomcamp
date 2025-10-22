@@ -1,29 +1,49 @@
-from typing import Dict, Any
-import joblib
-from fastapi import FastAPI
 import uvicorn
+import joblib
 import pandas as pd
+from fastapi import FastAPI
+from pydantic import BaseModel
 
-app = FastAPI(title="lead-scoring-prediction")
+# Define input schema
+class Trader(BaseModel):
+    active_weeks: int
+    total_volume: float
+    trader_activity_status: str
+    trader_volume_status: str
+    trader_weekly_frequency_status: str
+    tx_count_365d: int
+    wallet: str
 
-with open('logreg_pipeline.pkl', 'rb') as f_in:
+# Load pipeline
+with open("logreg_pipeline.pkl", "rb") as f_in:
     pipeline = joblib.load(f_in)
 
+app = FastAPI()
 
-def predict_single(trader):
-    trader_df = pd.DataFrame([trader])
-    result = pipeline.predict_proba(trader)[0, 1]
-    return float(result)
+def predict_single(trader_dict):
+    # Convert dict → single-row DataFrame
+    df = pd.DataFrame([trader_dict])
+
+    # ✅ Ensure all columns the model expects are present
+    expected_cols = pipeline.feature_names_in_
+    missing_cols = set(expected_cols) - set(df.columns)
+    for col in missing_cols:
+        df[col] = None  # fill missing columns with NaN or None
+
+    # ✅ Reorder columns to match training order
+    df = df[expected_cols]
+
+    # Predict probability
+    result = pipeline.predict_proba(df)[0, 1]
+    return result
+
 
 @app.post("/predict")
-def predict(trader: Dict[str, Any]):
-    prob = predict_single(trader)
-
-    return {
-        "trader_prob": prob,
-        "type": bool(prob >= 0.5)
-    }
-
+def predict(trader: Trader):
+    trader_dict = trader.dict()
+    prob = predict_single(trader_dict)
+    pred = prob >= 0.5
+    return {"probability": float(prob), "prediction": bool(pred)}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=9696)
